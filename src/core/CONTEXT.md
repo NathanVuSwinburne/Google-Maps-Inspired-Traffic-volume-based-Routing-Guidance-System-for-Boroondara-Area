@@ -63,4 +63,6 @@ RouteVisualizer ◄────────────────────�
 ```
 
 ## Thread Safety
-`RouteFinder` is **not thread-safe** — `self.graph` and `self.traffic_volume_lookup` are mutated per call. In Streamlit's single-threaded model this is fine, but would need refactoring for concurrent serving.
+`RouteFinder` is **not thread-safe** — `self.graph` and `self.traffic_volume_lookup` are mutated per call.
+
+**In the FastAPI backend**, this is handled by `backend/services/route_service.py` (`RouteService`), which wraps every `find_multiple_routes()` call in a `threading.Lock`. This serialises concurrent HTTP requests without modifying `src/core/`. Do not call `RouteFinder.find_multiple_routes()` directly from async FastAPI handlers; always go through `RouteService`.

@@ -69,6 +69,19 @@ You can try out the system here:
 
 ```bash
 git clone https://github.com/NathanVuSwinburne/Traffic-volume-based-Routing-Guidance-System-for-Boroondara-Area.git
+
+# Backend (Terminal 1)
+pip install -r backend/requirements.txt
+uvicorn backend.main:app --reload --port 8000
+
+# Frontend (Terminal 2)
+cd frontend
+# Edit .env.local and set NEXT_PUBLIC_MAPBOX_TOKEN
+npm install
+npm run dev
+# Open http://localhost:3000
+
+# Legacy Streamlit app (deprecated)
 pip install -r requirements.txt
 streamlit run app.py
 

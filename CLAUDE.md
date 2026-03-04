@@ -31,25 +31,29 @@ It combines:
 ## 2. Architecture Overview
 
 ### Frontend
-**Streamlit** web app (`app.py`) with two pages:
+**Next.js 14** app (`frontend/`) with two pages rendered via **Mapbox GL** (`react-map-gl`):
 
 | Page | File | Description |
 |------|------|-------------|
-| Network Map | `src/views/network_page.py` | Interactive Folium map of all SCATS sites and road connections |
-| Route Finder | `src/views/route_page.py` | User selects origin/dest/algorithm/model/datetime → returns ranked routes |
+| Network Map | `frontend/app/network/page.tsx` | Mapbox map of all SCATS sites + connections; site search + detail tables |
+| Route Finder | `frontend/app/routes/page.tsx` | Form → ranked routes rendered as animated dasharray lines on Mapbox |
 
-Maps are rendered via **Folium + AntPath** and embedded using `streamlit_folium`.
+Data fetched via SWR hooks in `frontend/hooks/`; GeoJSON conversion done in hooks before reaching map components.
 
 ### Backend
-All Python. No separate API server — Streamlit runs the backend inline.
+**FastAPI** server (`backend/`) exposes routing and network data as a JSON REST API.
 
 | Module | Location | Responsibility |
 |--------|----------|----------------|
+| `main.py` | `backend/main.py` | FastAPI app, CORS, lifespan startup (loads SiteNetwork + RouteFinder once) |
+| `RouteService` | `backend/services/route_service.py` | Thread-safe `RouteFinder` wrapper (`threading.Lock`) |
+| Network router | `backend/routers/network.py` | GET `/api/network/sites`, `/connections`, `/sites/{id}` |
+| Routes router | `backend/routers/routes.py` | POST `/api/routes/find` |
+| Schemas | `backend/schemas/` | Pydantic request/response models with field validators |
 | `SiteNetwork` | `src/core/map_builder.py` | Builds directed graph from SCATS metadata JSON |
 | `RouteFinder` | `src/core/route_finder.py` | Loads ML prediction CSVs, builds `SearchGraph`, runs algorithms, computes route details |
 | `SearchGraph` | `src/algorithms/search_graph.py` | Adjacency list + coordinate store used by all search algorithms |
 | Search algorithms | `src/algorithms/*.py` | Six interchangeable implementations of `SearchAlgorithm.search()` |
-| Visualizers | `src/visualizer/*.py` | Folium map builders for network and route views |
 
 ### Machine Learning Components
 
@@ -77,10 +81,14 @@ checkpoints/saved_models/{run_id}/best.keras
     ↓ rolling_prediction_script.py (GPU, per model)
 processed_data/complete_csv_oct_nov_2006/{model}/*_complete_data.csv
 
-[Runtime — Streamlit]
-sites_metadata.json → SiteNetwork → directed road graph
-complete_csv_oct_nov_2006/*.csv → RouteFinder → travel-time edges
-User input → SearchGraph + Algorithm → ranked routes → Folium map
+[Runtime — FastAPI + Next.js]
+sites_metadata.json → SiteNetwork → directed road graph   ┐
+complete_csv_oct_nov_2006/*.csv → RouteFinder             ├─ loaded once at backend startup
+                                                           ┘
+Browser → Next.js (port 3000)
+  └── POST /api/routes/find → FastAPI (port 8000)
+        └── RouteService (thread-safe) → RouteFinder.find_multiple_routes()
+              └── SearchGraph + Algorithm → ranked routes JSON → Mapbox map
 ```
 
 ---
@@ -92,8 +100,44 @@ project-root/
 ├── CLAUDE.md                          ← YOU ARE HERE
 ├── PROJECT_CONTEXT.md                 ← Master human-readable overview
 ├── README.md                          ← Public-facing project description
-├── app.py                             ← Streamlit entry point
-├── requirements.txt                   ← Python dependencies
+├── app.py                             ← DEPRECATED Streamlit entry point (kept for reference)
+├── requirements.txt                   ← Python dependencies (ML + legacy Streamlit)
+│
+├── backend/                           ← FastAPI REST API (NEW)
+│   ├── CONTEXT.md
+│   ├── main.py                        ← FastAPI app entry point (uvicorn backend.main:app)
+│   ├── requirements.txt               ← fastapi, uvicorn, pydantic
+│   ├── routers/                       ← Route handlers
+│   │   ├── network.py                 ← GET /api/network/*
+│   │   └── routes.py                  ← POST /api/routes/find
+│   ├── schemas/                       ← Pydantic request/response models
+│   │   ├── network.py
+│   │   └── routes.py
+│   └── services/
+│       └── route_service.py           ← Thread-safe RouteFinder wrapper
+│
+├── frontend/                          ← Next.js 14 web app (NEW)
+│   ├── CONTEXT.md
+│   ├── package.json
+│   ├── app/
+│   │   ├── layout.tsx                 ← Root layout (Sidebar nav)
+│   │   ├── network/page.tsx           ← Network Map page
+│   │   └── routes/page.tsx            ← Route Finder page
+│   ├── components/
+│   │   ├── layout/Sidebar.tsx
+│   │   ├── map/                       ← BaseMap, NetworkLayer, RouteLayer, SitePopup
+│   │   ├── network/                   ← NetworkControls, ConnectionsTable, SiteConnectionsPanel
+│   │   └── routes/                    ← RouteForm, RouteSummaryTable, RouteDetailPanel, RouteResultsPanel
+│   ├── hooks/                         ← SWR hooks (useNetwork, useRoutes) + GeoJSON conversion
+│   ├── lib/                           ← api.ts (fetch wrappers), mapColors.ts
+│   └── types/index.ts                 ← All TypeScript interfaces
+│
+├── legacy/                            ← Archived Streamlit UI (read-only reference)
+│   ├── CONTEXT.md
+│   ├── app.py
+│   └── src/
+│       ├── views/                     ← Archived Streamlit page renderers
+│       └── visualizer/                ← Archived Folium map builders
 │
 ├── raw_data/                          ← Immutable source data (do not modify)
 │   └── CONTEXT.md
@@ -118,7 +162,7 @@ project-root/
 │   └── training_plots/                ← Loss/MAE curve PNGs
 │       └── CONTEXT.md
 │
-├── src/                               ← All application source code
+├── src/                               ← All application source code (UNCHANGED)
 │   ├── CONTEXT.md
 │   ├── algorithms/                    ← Graph search implementations
 │   │   └── CONTEXT.md
@@ -132,9 +176,9 @@ project-root/
 │   │   └── CONTEXT.md
 │   ├── utils/                         ← Shared helpers
 │   │   └── CONTEXT.md
-│   ├── views/                         ← Streamlit page renderers
+│   ├── views/                         ← Legacy Streamlit pages (still present, not active)
 │   │   └── CONTEXT.md
-│   └── visualizer/                    ← Folium map builders
+│   └── visualizer/                    ← Legacy Folium map builders (still present, not active)
 │       └── CONTEXT.md
 │
 ├── data_preprocessing.ipynb           ← Interactive ETL notebook
@@ -200,47 +244,84 @@ def search(self, start: int, goals: list[int]) -> tuple[int, int, list[int]]:
 
 ### 4.3 API / Application Layer
 
-There is no REST API. The application layer is **Streamlit** with inline Python calls:
-
-```
-app.py (TBRGSApp)
-├── SiteNetwork     → graph topology
-├── RouteFinder     → routing logic
-├── NetworkPage     → renders Network Map
-└── RoutePage       → renders Route Finder
-     ├── collects user input (widgets)
-     ├── calls RouteFinder.find_multiple_routes()
-     └── calls RouteVisualizer.create_multi_route_map()
+**FastAPI** REST API (`backend/`), started with:
+```bash
+uvicorn backend.main:app --reload --port 8000
 ```
 
-If a REST API is ever added, the `src/core/` layer should be the backend — it has no Streamlit dependencies.
+```
+backend/main.py (FastAPI)
+├── lifespan startup:
+│     SiteNetwork → app.state.network
+│     RouteFinder → RouteService → app.state.route_service
+├── GET  /api/health
+├── GET  /api/network/sites
+├── GET  /api/network/connections
+├── GET  /api/network/sites/{site_id}
+└── POST /api/routes/find
+      ├── validates RouteRequest (Pydantic)
+      ├── RouteService.find_routes() — acquires threading.Lock
+      └── returns FindRoutesResponse JSON
+```
+
+**Thread safety**: `RouteFinder` mutates `self.graph` per call (documented in `src/core/CONTEXT.md`). `RouteService` serialises concurrent requests with a `threading.Lock`.
+
+**Model name mapping**: UI exposes `"Bi_LSTM"` but `RouteFinder._load_dataframes()` uses `"Custom"` as the dict key for BiLSTM data. `RouteService` remaps before calling the finder.
+
+**Swagger UI**: `http://localhost:8000/docs` (auto-generated).
 
 ---
 
 ### 4.4 Frontend Map Visualisation
 
-**Library**: Folium + AntPath plugin, embedded via `streamlit_folium.folium_static()`
+**Library**: Mapbox GL via `react-map-gl` (Next.js 14, `frontend/`)
 
-| Visualizer class | File | Output |
-|-----------------|------|--------|
-| `NetworkVisualizer` | `src/visualizer/network_visualizer.py` | Full SCATS network map with all sites |
-| `RouteVisualizer` | `src/visualizer/route_visualizer.py` | Single-route or multi-route coloured path maps |
-| `BaseVisualizer` | `src/visualizer/base_visualizer.py` | Shared base: `_create_base_map()`, `_add_background_sites()` |
+| Component | File | Description |
+|-----------|------|-------------|
+| `BaseMap` | `frontend/components/map/BaseMap.tsx` | `react-map-gl <Map>` wrapper, centred on Boroondara, dark-v11 style |
+| `NetworkLayer` | `frontend/components/map/NetworkLayer.tsx` | Circle layer (sites) + line + arrow layers (connections) |
+| `RouteLayer` | `frontend/components/map/RouteLayer.tsx` | Animated `line-dasharray` per route (AntPath equivalent) |
+| `SitePopup` | `frontend/components/map/SitePopup.tsx` | Click popup with site ID, roads, locations |
 
-**Colour semantics:**
-- Green marker = origin, Red marker = destination, Blue marker = intermediate site
+**Colour semantics** (matches `legacy/src/visualizer/route_visualizer.py` exactly — see `frontend/lib/mapColors.ts`):
+- Circle layers: gray (background site), red (highlighted/selected)
 - Route path colours: green (best) → yellow → orange → red → darkred → black (worst)
+- Routes drawn in **reverse order** so best route renders on top
+
+**Animation**: `RouteLayer` uses `requestAnimationFrame` + `map.setPaintProperty` to cycle `line-dasharray` values, producing a moving-ant effect equivalent to Folium AntPath.
+
+**SSR**: All Mapbox components are loaded via `next/dynamic` with `{ ssr: false }` to prevent server-side rendering errors.
 
 ---
 
 ## 5. Development Workflow
 
-### Running the App
+### Running the App (FastAPI + Next.js)
+
+**Terminal 1 — Backend:**
+```bash
+# From project root
+pip install -r backend/requirements.txt
+uvicorn backend.main:app --reload --port 8000
+# Swagger UI: http://localhost:8000/docs
+```
+
+**Terminal 2 — Frontend:**
+```bash
+cd frontend
+npm install
+# Set NEXT_PUBLIC_MAPBOX_TOKEN in frontend/.env.local first
+npm run dev
+# App: http://localhost:3000
+```
+
+The app uses pre-computed prediction CSVs — no GPU, no model loading at startup.
+
+### Running the Legacy Streamlit App (deprecated)
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
-The app uses pre-computed prediction CSVs — no GPU, no model loading at startup.
 
 ### Running the ETL Pipeline (offline)
 ```bash
@@ -300,10 +381,11 @@ tensorboard --logdir checkpoints/logs
 - TensorFlow >= 2.15 is required for `.keras` format loading — do not downgrade.
 
 ### 6.3 Separate UI from ML Logic
-- Streamlit widget code lives exclusively in `src/views/`
-- Domain logic (`SiteNetwork`, `RouteFinder`) in `src/core/` must not import from `streamlit`
-- Visualisation (Folium maps) in `src/visualizer/` must not contain routing logic
+- UI code lives exclusively in `frontend/` (React/Next.js) — no Python in frontend
+- Domain logic (`SiteNetwork`, `RouteFinder`) in `src/core/` must not import from `streamlit` or any web framework
+- API layer (`backend/`) must not contain routing/ML logic — it delegates to `src/core/` only
 - The `src/algorithms/` classes must not import from any other `src` subpackage
+- Legacy Streamlit code in `legacy/` and `src/views/` must not be modified or re-activated
 
 ### 6.4 Keep Modules Modular
 - Search algorithms must extend `SearchAlgorithm` and implement `search(start, goals) → (goal, n_expanded, path)`
@@ -342,7 +424,13 @@ After any significant architectural change, update:
 
 | What | Where |
 |------|-------|
-| App entry point | `app.py` |
+| **Backend entry point** | `backend/main.py` (`uvicorn backend.main:app`) |
+| **Frontend entry point** | `frontend/app/layout.tsx` (`npm run dev` in `frontend/`) |
+| Thread-safe route wrapper | `backend/services/route_service.py` — `RouteService` |
+| API schemas (Pydantic) | `backend/schemas/` |
+| Typed API client | `frontend/lib/api.ts` |
+| Map colour constants | `frontend/lib/mapColors.ts` |
+| SWR data hooks | `frontend/hooks/useNetwork.ts`, `frontend/hooks/useRoutes.ts` |
 | Road graph builder | `src/core/map_builder.py` — `SiteNetwork` |
 | Route search orchestrator | `src/core/route_finder.py` — `RouteFinder` |
 | All search algorithms | `src/algorithms/` |
@@ -354,6 +442,7 @@ After any significant architectural change, update:
 | Best trained model | `checkpoints/saved_models/cnn_bigru_20250512_084138/best.keras` |
 | Feature scaler | `processed_data/preprocessed_data/scaler.pkl` |
 | Site topology | `processed_data/preprocessed_data/sites_metadata.json` |
+| Legacy Streamlit UI | `legacy/` (archive — do not modify) |
 
 ### Module Import Hierarchy (no circular imports)
 ```
