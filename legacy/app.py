@@ -1,6 +1,3 @@
-# DEPRECATED — This Streamlit entry point is retained for legacy reference only.
-# The active application is now served by the FastAPI backend (backend/) and
-# the Next.js frontend (frontend/). See legacy/app.py for the archived original.
 import streamlit as st
 from src.core.map_builder import SiteNetwork
 from src.core.route_finder import RouteFinder
