@@ -16,7 +16,13 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`API ${res.status}: ${body}`);
+    try {
+      const json = JSON.parse(body);
+      throw new Error(json.detail ?? body);
+    } catch (e) {
+      if (e instanceof SyntaxError) throw new Error(body);
+      throw e;
+    }
   }
   return res.json() as Promise<T>;
 }
