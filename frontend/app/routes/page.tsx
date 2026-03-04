@@ -15,7 +15,9 @@ export default function RoutesPage() {
   const { trigger, data, routeGeoJSONs, error, isMutating } = useRoutes();
 
   async function handleSubmit(req: RouteRequest) {
-    await trigger(req);
+    // throwOnError: false keeps the error in SWR's `error` state instead of
+    // propagating it as an unhandled exception that crashes the page.
+    await trigger(req, { throwOnError: false });
   }
 
   return (
