@@ -1,20 +1,35 @@
 "use client";
 
-import useSWRMutation from "swr/mutation";
+import { useState, useCallback } from "react";
 import { api } from "@/lib/api";
-import type { RouteRequest, Route } from "@/types";
+import type { RouteRequest, FindRoutesResponse, Route } from "@/types";
 import type { FeatureCollection, LineString } from "geojson";
 import { TRAFFIC_LEVEL_COLORS } from "@/lib/mapColors";
 
-async function findRoutes(_key: string, { arg }: { arg: RouteRequest }) {
-  return api.findRoutes(arg);
-}
-
 export function useRoutes() {
-  const { trigger, data, error, isMutating, reset } = useSWRMutation(
-    "routes/find",
-    findRoutes
-  );
+  const [data, setData] = useState<FindRoutesResponse | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const [isMutating, setIsMutating] = useState(false);
+
+  const trigger = useCallback(async (req: RouteRequest) => {
+    setIsMutating(true);
+    setError(null);
+    try {
+      const result = await api.findRoutes(req);
+      setData(result);
+      return result;
+    } catch (e) {
+      setError(e instanceof Error ? e : new Error("Request failed"));
+      return null;
+    } finally {
+      setIsMutating(false);
+    }
+  }, []);
+
+  const reset = useCallback(() => {
+    setData(null);
+    setError(null);
+  }, []);
 
   /** Convert routes to per-route GeoJSON LineString feature collections. */
   const routeGeoJSONs: Array<{ route: Route; geojson: FeatureCollection<LineString> }> =

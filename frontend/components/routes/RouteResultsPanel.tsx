@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { FindRoutesResponse } from "@/types";
+import { RANK_COLORS } from "@/lib/mapColors";
 import RouteSummaryTable from "./RouteSummaryTable";
 import RouteDetailPanel from "./RouteDetailPanel";
 
@@ -26,13 +27,14 @@ export default function RouteResultsPanel({ data }: RouteResultsPanelProps) {
 
       <RouteSummaryTable
         routes={data.routes}
+        colors={RANK_COLORS}
         selectedIndex={selectedIndex}
         onSelect={(i) => setSelectedIndex(i === selectedIndex ? null : i)}
       />
 
       <div className="space-y-2">
         {data.routes.map((route, i) => (
-          <RouteDetailPanel key={i} route={route} />
+          <RouteDetailPanel key={i} route={route} color={RANK_COLORS[i] ?? "#1f2937"} />
         ))}
       </div>
     </div>

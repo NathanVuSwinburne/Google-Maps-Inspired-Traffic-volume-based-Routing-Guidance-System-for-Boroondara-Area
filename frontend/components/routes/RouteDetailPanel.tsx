@@ -2,15 +2,14 @@
 
 import { useState } from "react";
 import type { Route } from "@/types";
-import { TRAFFIC_LEVEL_COLORS } from "@/lib/mapColors";
 
 interface RouteDetailPanelProps {
   route: Route;
+  color: string;
 }
 
-export default function RouteDetailPanel({ route }: RouteDetailPanelProps) {
+export default function RouteDetailPanel({ route, color }: RouteDetailPanelProps) {
   const [open, setOpen] = useState(true);
-  const color = TRAFFIC_LEVEL_COLORS[route.traffic_level];
 
   return (
     <div className="border border-gray-200 rounded overflow-hidden">

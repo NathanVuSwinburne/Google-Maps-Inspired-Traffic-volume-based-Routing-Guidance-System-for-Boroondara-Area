@@ -1,16 +1,17 @@
 "use client";
 
 import type { Route } from "@/types";
-import { TRAFFIC_LEVEL_COLORS } from "@/lib/mapColors";
 
 interface RouteSummaryTableProps {
   routes: Route[];
+  colors: string[];
   selectedIndex: number | null;
   onSelect: (index: number) => void;
 }
 
 export default function RouteSummaryTable({
   routes,
+  colors,
   selectedIndex,
   onSelect,
 }: RouteSummaryTableProps) {
@@ -40,7 +41,7 @@ export default function RouteSummaryTable({
               <td className="px-2 py-1.5">
                 <span
                   className="inline-block w-3 h-3 rounded-full"
-                  style={{ backgroundColor: TRAFFIC_LEVEL_COLORS[r.traffic_level] }}
+                  style={{ backgroundColor: colors[i] ?? "#1f2937" }}
                 />
               </td>
             </tr>

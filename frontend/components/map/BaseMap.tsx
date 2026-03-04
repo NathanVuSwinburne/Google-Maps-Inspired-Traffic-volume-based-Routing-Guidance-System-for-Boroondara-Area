@@ -34,7 +34,7 @@ export default function BaseMap({
         zoom: DEFAULT_ZOOM,
       }}
       style={{ width: "100%", height: "100%" }}
-      mapStyle="mapbox://styles/mapbox/dark-v11"
+      mapStyle="mapbox://styles/mapbox/light-v11"
       onClick={onClick}
       onMouseMove={onMouseMove}
       interactiveLayerIds={interactiveLayerIds}

@@ -29,6 +29,7 @@ const arrowLayer: SymbolLayer = {
     "text-size": 10,
     "text-allow-overlap": false,
     "text-ignore-placement": false,
+    "text-keep-upright": false,
   },
   paint: {
     "text-color": "#ef4444",
@@ -54,7 +55,7 @@ const sitesCircleLayer: CircleLayer = {
     ],
     "circle-opacity": 0.85,
     "circle-stroke-width": 1,
-    "circle-stroke-color": "#ffffff",
+    "circle-stroke-color": "#1f2937",
   },
 };
 
