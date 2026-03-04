@@ -1,9 +1,8 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   reactStrictMode: true,
   // Mapbox GL requires transpilation for some environments
   transpilePackages: ["mapbox-gl"],
 };
 
-export default nextConfig;
+module.exports = nextConfig;
