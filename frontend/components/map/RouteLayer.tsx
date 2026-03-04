@@ -20,7 +20,9 @@ export default function RouteLayer({
   trafficLevel,
   animate = true,
 }: RouteLayerProps) {
-  const { current: map } = useMap();
+  const { current: mapRef } = useMap();
+  // useMap() returns a react-map-gl wrapper; .getMap() gives the raw Mapbox GL instance
+  const map = mapRef?.getMap();
   const rafRef = useRef<number | null>(null);
   const stepRef = useRef(0);
   const layerId = `route-line-${routeId}`;
@@ -54,7 +56,7 @@ export default function RouteLayer({
       if (now - lastTime >= INTERVAL_MS) {
         lastTime = now;
         stepRef.current = (stepRef.current + 1) % DASH_SEQUENCE.length;
-        if (map.getLayer(layerId)) {
+        if (map && map.getLayer(layerId)) {
           map.setPaintProperty(layerId, "line-dasharray", DASH_SEQUENCE[stepRef.current]);
         }
       }
