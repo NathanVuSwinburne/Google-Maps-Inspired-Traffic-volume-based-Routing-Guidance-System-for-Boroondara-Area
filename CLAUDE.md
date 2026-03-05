@@ -298,21 +298,28 @@ backend/main.py (FastAPI)
 
 ### Running the App (FastAPI + Next.js)
 
-**Terminal 1 — Backend:**
+Two terminals are required. Full step-by-step instructions are in **`README.md`** (the canonical reference). Summary:
+
+**Terminal 1 — Backend** (run from project root):
 ```bash
-# From project root
 pip install -r backend/requirements.txt
 uvicorn backend.main:app --reload --port 8000
-# Swagger UI: http://localhost:8000/docs
 ```
+- API: `http://localhost:8000`
+- Swagger UI: `http://localhost:8000/docs`
 
 **Terminal 2 — Frontend:**
 ```bash
 cd frontend
-npm install
-# Set NEXT_PUBLIC_MAPBOX_TOKEN in frontend/.env.local first
+npm install          # first time only
 npm run dev
-# App: http://localhost:3000
+```
+- App: `http://localhost:3000`
+
+**One-time setup**: add your Mapbox public token to `frontend/.env.local`:
+```env
+NEXT_PUBLIC_MAPBOX_TOKEN=pk.your_token_here
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
 
 The app uses pre-computed prediction CSVs — no GPU, no model loading at startup.

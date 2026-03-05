@@ -1,11 +1,12 @@
 # 🚦 AI-Powered Traffic Route Guidance System (Boroondara 2006)
 
-An **end-to-end traffic prediction & routing** project that fuses **deep learning time-series forecasting** with **heuristic graph search** to deliver **congestion-aware routes**.  
+An **end-to-end traffic prediction & routing** project that fuses **deep learning time-series forecasting** with **heuristic graph search** to deliver **congestion-aware routes**.
 Built on **real-world SCATS traffic signal volume data (City of Boroondara, 2006)** from the Victorian Government DataVic portal.
 
 <p align="left">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-blue">
-  <img alt="Streamlit" src="https://img.shields.io/badge/Streamlit-app-red">
+  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-backend-green">
+  <img alt="Next.js" src="https://img.shields.io/badge/Next.js-14-black">
   <img alt="TensorFlow" src="https://img.shields.io/badge/TensorFlow-Deep%20Learning-orange">
   <img alt="License" src="https://img.shields.io/badge/License-MIT-green">
 </p>
@@ -17,7 +18,7 @@ Built on **real-world SCATS traffic signal volume data (City of Boroondara, 2006
 - **Time-Series ML**: LSTM, GRU, BiLSTM, CNN-BiLSTM, CNN-BiGRU (TensorFlow/Keras).
 - **Feature Engineering**: Lag features (15m/1h/1d), sin/cos encodings (DoW/ToD), weekend & gap flags, location embeddings, baseline averages.
 - **Heuristic Routing**: A*, UCS, BFS, DFS, GBFS, Fringe Search; **Haversine** heuristic; **travel-time weighted edges** from ML predictions.
-- **Interactive App**: Streamlit + Folium with **color-coded congestion maps**, multi-model/multi-algorithm comparisons, sub-10s responses on complex routes.
+- **Interactive App**: Next.js + Mapbox GL with **color-coded congestion maps**, multi-model/multi-algorithm comparisons, animated route overlays.
 - **Robustness**: 10+ structured system tests (isolated nodes, long routes, rush hour vs off-peak, date bounds).
 
 ---
@@ -38,7 +39,7 @@ Built on **real-world SCATS traffic signal volume data (City of Boroondara, 2006
 
 ## 🗺️ Data
 
-- **Source**: Victorian Government **DataVic** — Traffic Signal Volume Data  
+- **Source**: Victorian Government **DataVic** — Traffic Signal Volume Data
   https://discover.data.vic.gov.au/dataset/traffic-signal-volume-data
 - **Scope**: **City of Boroondara**, **Oct–Nov 2006**, **15-minute intervals** (SCATS sites).
 - **Note**: Historical, geographically bounded dataset → realistic **missingness**, **seasonality**, **domain constraints**.
@@ -47,41 +48,145 @@ Built on **real-world SCATS traffic signal volume data (City of Boroondara, 2006
 
 ## 🧰 Tech Stack
 
-- **Python**: pandas, NumPy, scikit-learn, **TensorFlow/Keras**
-- **App & Viz**: **Streamlit**, **Folium**, Matplotlib
-- **Algorithms**: LSTM/GRU/BiLSTM, CNN-BiLSTM, CNN-BiGRU; **A\***, UCS, BFS, DFS, GBFS, Fringe
-- **Other**: Haversine, StandardScaler, early stopping, LR scheduling, checkpointing
+- **Backend**: Python 3.10, FastAPI, uvicorn, Pydantic, pandas, haversine
+- **Frontend**: Next.js 14, React 18, TypeScript, Mapbox GL (`react-map-gl`), SWR, Tailwind CSS
+- **ML**: TensorFlow/Keras — LSTM, GRU, BiLSTM, CNN-BiLSTM, CNN-BiGRU
+- **Algorithms**: A\*, UCS, BFS, DFS, GBFS, Fringe Search
 
 ---
-
 
 ## 🌐 Live Demo
 
-You can try out the system here:  
+You can try the legacy Streamlit version here:
 👉 [Google Maps Inspired AI-Powered Traffic Route Guidance System](https://traffic-based-route-guidance-system.streamlit.app/)
 
-⚠️ *Note*: The app is hosted on **Streamlit Cloud**, so if you’re the first visitor in a while, it may take **2–3 minutes (cold start)** to spin up. Thanks for your patience! Once it’s loaded, everything should run smoothly 🚀.
-
-
+⚠️ *The Streamlit demo may take 2–3 minutes to cold-start. The new FastAPI + Next.js app runs locally — see instructions below.*
 
 ---
-## 📦 Installation
+
+## 🚀 Running the App Locally (FastAPI + Next.js)
+
+> **You need two terminals open at the same time** — one for the backend, one for the frontend.
+
+---
+
+### Prerequisites
+
+| Tool | Minimum version | How to check |
+|------|----------------|--------------|
+| Python | 3.10+ | `python --version` |
+| Node.js | 18+ | `node --version` |
+| npm | 9+ | `npm --version` |
+| Mapbox token | — | Free at [mapbox.com](https://www.mapbox.com) (starts with `pk.`) |
+
+---
+
+### Step 1 — Clone the repository
 
 ```bash
 git clone https://github.com/NathanVuSwinburne/Traffic-volume-based-Routing-Guidance-System-for-Boroondara-Area.git
+cd Google-Maps-Inspired-Traffic-volume-based-Routing-Guidance-System-for-Boroondara-Area
+```
 
-# Backend (Terminal 1)
+---
+
+### Step 2 — Start the backend (Terminal 1)
+
+Run from the **project root** (not inside `backend/`).
+
+```bash
+# Install Python dependencies
 pip install -r backend/requirements.txt
+
+# Start the FastAPI server with hot-reload
 uvicorn backend.main:app --reload --port 8000
+```
 
-# Frontend (Terminal 2)
+**Expected output:**
+```
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process ...
+INFO:     Application startup complete.
+```
+
+| URL | Purpose |
+|-----|---------|
+| `http://localhost:8000` | API base URL |
+| `http://localhost:8000/docs` | Swagger UI — interactive API explorer |
+
+> Keep this terminal running. The backend loads all pre-computed ML prediction CSVs at startup — **no GPU required**.
+
+---
+
+### Step 3 — Configure your Mapbox token (one-time setup)
+
+The map requires a free Mapbox public token.
+
+1. Sign up or log in at [mapbox.com](https://www.mapbox.com)
+2. Go to your account page and copy the **default public token** (begins with `pk.`)
+3. Open `frontend/.env.local` and fill in:
+
+```env
+NEXT_PUBLIC_MAPBOX_TOKEN=pk.your_token_here
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+```
+
+> `frontend/.env.local` is git-ignored — your token is never committed to the repository.
+
+---
+
+### Step 4 — Start the frontend (Terminal 2)
+
+```bash
+# Navigate into the frontend directory
 cd frontend
-# Edit .env.local and set NEXT_PUBLIC_MAPBOX_TOKEN
+
+# Install Node.js dependencies (first time only — may take a minute)
 npm install
+
+# Start the Next.js development server
 npm run dev
-# Open http://localhost:3000
+```
 
-# Legacy Streamlit app (deprecated)
-pip install -r requirements.txt
-streamlit run app.py
+**Expected output:**
+```
+   ▲ Next.js 14.x.x
+   - Local:        http://localhost:3000
+   - Ready in Xs
+```
 
+> If port 3000 is busy, Next.js will automatically use 3001, 3002, etc.
+
+---
+
+### Step 5 — Open the app
+
+With **both servers running**, visit:
+
+```
+http://localhost:3000
+```
+
+| Page | Path | What it does |
+|------|------|--------------|
+| Network Map | `/network` | Interactive map of all SCATS intersections and road connections |
+| Route Finder | `/routes` | Pick origin, destination, date/time, ML model and algorithms — get ranked routes drawn on the map |
+
+---
+
+### Stopping the servers
+
+Press `Ctrl + C` in each terminal to shut down the backend and frontend.
+
+---
+
+### Troubleshooting
+
+| Symptom | Likely cause | Fix |
+|---------|-------------|-----|
+| `ModuleNotFoundError` on backend start | Missing Python packages | `pip install -r backend/requirements.txt` from project root |
+| `npm: command not found` | Node.js not installed | Download LTS from [nodejs.org](https://nodejs.org) |
+| Map is blank or shows a token error | Mapbox token missing/invalid | Check `NEXT_PUBLIC_MAPBOX_TOKEN` in `frontend/.env.local` |
+| CORS error in browser console | API URL mismatch | Ensure backend is on port 8000 and `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` |
+| "Connection refused" when searching routes | Backend not running | Start the backend in Terminal 1 first |
+| Port 8000 already in use | Another process on that port | Change to `--port 8001` and update `.env.local` accordingly |
