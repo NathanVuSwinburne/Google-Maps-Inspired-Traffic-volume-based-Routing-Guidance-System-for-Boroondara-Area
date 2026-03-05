@@ -1,7 +1,7 @@
 "use client";
 
 import { Source, Layer } from "react-map-gl";
-import type { CircleLayer, LineLayer, SymbolLayer } from "react-map-gl";
+import type { LineLayer, SymbolLayer } from "react-map-gl";
 import type { FeatureCollection, Point, LineString } from "geojson";
 
 interface NetworkLayerProps {
@@ -14,7 +14,7 @@ const connectionLineLayer: LineLayer = {
   id: "connections-line",
   type: "line",
   paint: {
-    "line-color": "#ef4444",
+    "line-color": "#22c55e",
     "line-width": 1.5,
     "line-opacity": 0.7,
   },
@@ -32,30 +32,36 @@ const arrowLayer: SymbolLayer = {
     "text-keep-upright": false,
   },
   paint: {
-    "text-color": "#ef4444",
+    "text-color": "#22c55e",
     "text-opacity": 0.8,
   },
 };
 
-const sitesCircleLayer: CircleLayer = {
-  id: "sites-circle",
-  type: "circle",
-  paint: {
-    "circle-radius": [
+const sitesSymbolLayer: SymbolLayer = {
+  id: "sites-symbol",
+  type: "symbol",
+  layout: {
+    "text-field": "▼",
+    "text-size": [
       "case",
       ["==", ["get", "role"], "highlighted"],
-      8,
-      5,
+      22,
+      14,
     ],
-    "circle-color": [
+    "text-anchor": "bottom",
+    "text-allow-overlap": true,
+    "text-ignore-placement": true,
+  },
+  paint: {
+    "text-color": [
       "case",
       ["==", ["get", "role"], "highlighted"],
       "#ef4444",
       "#6b7280",
     ],
-    "circle-opacity": 0.85,
-    "circle-stroke-width": 1,
-    "circle-stroke-color": "#1f2937",
+    "text-opacity": 0.9,
+    "text-halo-color": "#ffffff",
+    "text-halo-width": 1,
   },
 };
 
@@ -84,7 +90,7 @@ export default function NetworkLayer({
         <Layer {...arrowLayer} />
       </Source>
       <Source id="sites" type="geojson" data={patchedSites}>
-        <Layer {...sitesCircleLayer} />
+        <Layer {...sitesSymbolLayer} />
       </Source>
     </>
   );

@@ -97,10 +97,18 @@ export default function RoutesPage() {
           {routeGeoJSONs[0] && (() => {
             const coords = routeGeoJSONs[0].geojson.features[0]?.geometry.coordinates;
             if (!coords || coords.length < 2) return null;
+            const originSite = data?.query.origin_id != null
+              ? sitesData?.sites.find((s) => s.site_id === data.query.origin_id)
+              : undefined;
+            const destSite = data?.query.destination_id != null
+              ? sitesData?.sites.find((s) => s.site_id === data.query.destination_id)
+              : undefined;
             return (
               <RouteMarkers
                 start={coords[0] as [number, number]}
                 end={coords[coords.length - 1] as [number, number]}
+                startName={originSite ? `Site ${originSite.site_id} – ${originSite.connected_roads[0] ?? ""}` : undefined}
+                endName={destSite ? `Site ${destSite.site_id} – ${destSite.connected_roads[0] ?? ""}` : undefined}
               />
             );
           })()}

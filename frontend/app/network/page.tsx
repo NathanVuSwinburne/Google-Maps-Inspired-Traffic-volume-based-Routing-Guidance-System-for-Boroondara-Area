@@ -8,7 +8,6 @@ import NetworkControls, {
 import ConnectionsTable from "@/components/network/ConnectionsTable";
 import SiteConnectionsPanel from "@/components/network/SiteConnectionsPanel";
 import { useNetworkSites, useNetworkConnections } from "@/hooks/useNetwork";
-import type { Site } from "@/types";
 
 // Dynamically import map (SSR disabled — Mapbox GL requires browser)
 const BaseMap = dynamic(() => import("@/components/map/BaseMap"), { ssr: false });
@@ -26,7 +25,7 @@ export default function NetworkPage() {
   const [panelOpen, setPanelOpen] = useState(true);
   const [mode, setMode] = useState<DisplayMode>("all-sites");
   const [selectedSiteId, setSelectedSiteId] = useState<number | null>(null);
-  const [popup, setPopup] = useState<{
+  const [hoverPopup, setHoverPopup] = useState<{
     longitude: number;
     latitude: number;
     siteId: number;
@@ -36,26 +35,35 @@ export default function NetworkPage() {
 
   const handleMapClick = useCallback(
     (e: mapboxgl.MapLayerMouseEvent) => {
+      if (mode !== "site-detail") return;
       const features = e.features;
-      if (!features || features.length === 0) {
-        setPopup(null);
-        return;
-      }
-      const props = features[0].properties;
-      if (!props) return;
-      const geom = features[0].geometry as GeoJSON.Point;
-      setPopup({
-        longitude: geom.coordinates[0],
-        latitude: geom.coordinates[1],
-        siteId: props.site_id,
-        roads: props.connected_roads,
-        locations: props.locations,
-      });
-      if (mode === "site-detail") {
-        setSelectedSiteId(props.site_id);
+      if (features && features.length > 0) {
+        setSelectedSiteId(features[0].properties?.site_id ?? null);
       }
     },
     [mode]
+  );
+
+  const handleMouseMove = useCallback(
+    (e: mapboxgl.MapLayerMouseEvent) => {
+      const features = e.features;
+      if (features && features.length > 0) {
+        const props = features[0].properties;
+        const geom = features[0].geometry as GeoJSON.Point;
+        if (props && geom) {
+          setHoverPopup({
+            longitude: geom.coordinates[0],
+            latitude: geom.coordinates[1],
+            siteId: props.site_id,
+            roads: props.connected_roads,
+            locations: props.locations,
+          });
+          return;
+        }
+      }
+      setHoverPopup(null);
+    },
+    []
   );
 
   const isLoading = sitesLoading || connsLoading;
@@ -68,6 +76,7 @@ export default function NetworkPage() {
           className={`bg-white border-r border-gray-200 overflow-hidden transition-[width] duration-300 ease-in-out ${
             panelOpen ? "w-72" : "w-0"
           }`}
+          onTransitionEnd={() => window.dispatchEvent(new Event("resize"))}
         >
           <div className="w-72 overflow-y-auto h-full p-4 space-y-6">
             <h1 className="text-lg font-bold">Network Map</h1>
@@ -125,7 +134,8 @@ export default function NetworkPage() {
       <div className="flex-1 relative">
         <BaseMap
           onClick={handleMapClick}
-          interactiveLayerIds={["sites-circle"]}
+          onMouseMove={handleMouseMove}
+          interactiveLayerIds={["sites-symbol"]}
         >
           {sitesGeoJSON && connectionsGeoJSON && (
             <NetworkLayer
@@ -134,10 +144,10 @@ export default function NetworkPage() {
               highlightedId={selectedSiteId}
             />
           )}
-          {popup && (
+          {hoverPopup && (
             <SitePopup
-              {...popup}
-              onClose={() => setPopup(null)}
+              {...hoverPopup}
+              onClose={() => setHoverPopup(null)}
             />
           )}
         </BaseMap>
