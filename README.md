@@ -55,14 +55,6 @@ Built on **real-world SCATS traffic signal volume data (City of Boroondara, 2006
 
 ---
 
-## 🌐 Live Demo
-
-You can try the legacy Streamlit version here:
-👉 [Google Maps Inspired AI-Powered Traffic Route Guidance System](https://traffic-based-route-guidance-system.streamlit.app/)
-
-⚠️ *The Streamlit demo may take 2–3 minutes to cold-start. The new FastAPI + Next.js app runs locally — see instructions below.*
-
----
 
 ## 🚀 Running the App Locally (FastAPI + Next.js)
 
