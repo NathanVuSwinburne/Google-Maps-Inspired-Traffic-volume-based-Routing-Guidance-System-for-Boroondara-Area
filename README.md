@@ -23,7 +23,8 @@ Built on **real-world SCATS traffic signal volume data (City of Boroondara, 2006
 
 **Page 1.1: Network Map**
 
-<img width="1903" height="862" alt="image" src="https://github.com/user-attachments/assets/ca5a5749-e3d1-4f48-8c3b-300cfab50799" />
+![Uploading image.png…]()
+
 
 **Page 1.1: Search for Site Information**
 
