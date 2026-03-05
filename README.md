@@ -21,14 +21,21 @@ Built on **real-world SCATS traffic signal volume data (City of Boroondara, 2006
 - **Interactive App**: Next.js + Mapbox GL with **color-coded congestion maps**, multi-model/multi-algorithm comparisons, animated route overlays.
 - **Robustness**: 10+ structured system tests (isolated nodes, long routes, rush hour vs off-peak, date bounds).
 
-**Page 1: Network Map**
+**Page 1.1: Network Map**
 
 <img width="1903" height="862" alt="image" src="https://github.com/user-attachments/assets/ca5a5749-e3d1-4f48-8c3b-300cfab50799" />
 
-**Page 2: Route Finder**
+**Page 1.1: Search for Site Information**
+
+<img width="1914" height="866" alt="image" src="https://github.com/user-attachments/assets/fbeb478f-71e2-4247-a880-38ab611bbe16" />
+
+**Page 2.1: Route Finder**
 
 <img width="1914" height="870" alt="image" src="https://github.com/user-attachments/assets/af9179c2-98fd-4273-8d22-58790c05744a" />
 
+**Page 2.2: Algorithms Ranking**
+
+<img width="1910" height="867" alt="image" src="https://github.com/user-attachments/assets/19ae5ab3-c272-4db7-bdb6-9f137e1f2dfd" />
 
 ---
 
