@@ -10,22 +10,27 @@ Live demo: https://traffic-based-route-guidance-system.streamlit.app/
 ## System Architecture (High Level)
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Streamlit App  (app.py)                  │
-│  ┌──────────────┐              ┌──────────────────────────┐  │
-│  │ Network Map  │              │     Route Finder          │  │
-│  │   Page       │              │  origin → dest            │  │
-│  └──────┬───────┘              └────────────┬─────────────┘  │
-│         │                                   │                │
-│  NetworkVisualizer               RouteFinder + RouteVisualizer│
-└─────────┼───────────────────────────────────┼───────────────┘
-          │                                   │
-    SiteNetwork                        SearchGraph + Algorithms
-    (map_builder.py)                   (A*, UCS, BFS, DFS, GBFS, Fringe)
-          │                                   │
-    sites_metadata.json            complete_csv_oct_nov_2006/
-                                   (ML predictions per model)
+[Browser]
+    └── Next.js frontend (port 3000)
+          ├── /network  — Network Map (Mapbox GL, all sites + connections)
+          └── /routes   — Route Finder (form → ranked routes on Mapbox)
+                │  POST /api/routes/find
+                │  GET  /api/network/sites
+                │  GET  /api/network/connections
+                ▼
+        FastAPI backend (port 8000)
+          ├── Startup: loads SiteNetwork + RouteFinder once (from src/core/)
+          ├── RouteService (threading.Lock — RouteFinder is not thread-safe)
+          └── Returns clean JSON (route coords, ETA, traffic_level, steps)
+                │
+                ├── SiteNetwork (src/core/map_builder.py)
+                │     └── sites_metadata.json → directed road graph
+                └── RouteFinder (src/core/route_finder.py)
+                      ├── complete_csv_oct_nov_2006/ → traffic lookup
+                      └── SearchGraph + Algorithms (A*, UCS, BFS, DFS, GBFS, Fringe)
 ```
+
+**Legacy Streamlit app** (`app.py`, `src/views/`, `src/visualizer/`) archived to `legacy/` — not active.
 
 ---
 
@@ -47,8 +52,10 @@ Live demo: https://traffic-based-route-guidance-system.streamlit.app/
 | `src/inference/` | Batch prediction | `rolling_prediction_script.py` |
 | `src/train_and_evaluate/` | Model defs + training | `model_architecture.py`, `train_and_evaluate.py` |
 | `src/utils/` | Shared helpers | `utils.py` |
-| `src/views/` | Streamlit pages | `network_page.py`, `route_page.py` |
-| `src/visualizer/` | Folium map renderers | `route_visualizer.py`, `network_visualizer.py` |
+| `backend/` | FastAPI REST API | `main.py`, `routers/`, `schemas/`, `services/` |
+| `frontend/` | Next.js 14 web app | `app/`, `components/`, `hooks/`, `lib/`, `types/` |
+| `legacy/src/views/` | Archived Streamlit pages | `network_page.py`, `route_page.py` |
+| `legacy/src/visualizer/` | Archived Folium renderers | `route_visualizer.py`, `network_visualizer.py` |
 
 > Each folder has its own `CONTEXT.md` with detailed file-level descriptions.
 
@@ -72,18 +79,25 @@ checkpoints/saved_models/{run_id}/best.keras
 processed_data/complete_csv_oct_nov_2006/{model}/…_complete_data.csv
 ```
 
-## Runtime (Streamlit App)
+## Runtime (FastAPI + Next.js)
 
 ```
-streamlit run app.py
+# Terminal 1
+uvicorn backend.main:app --reload --port 8000
     │
     ├── SiteNetwork loads sites_metadata.json → directed road graph
-    ├── RouteFinder loads 3 model CSVs → traffic lookup table
+    └── RouteFinder loads 3 model CSVs → traffic lookup table (once at startup)
+
+# Terminal 2
+cd frontend && npm run dev    # http://localhost:3000
+    │
     └── User selects origin/dest/algorithm/model/datetime
           │
-          └── SearchGraph built with travel-time edges
+          └── POST /api/routes/find → RouteService → RouteFinder
                 │
-                └── Algorithm.search() → path → step details → Folium map
+                └── Algorithm.search() → path → step details → JSON
+                      │
+                      └── Mapbox GL animated route lines
 ```
 
 ---
@@ -110,9 +124,10 @@ Metric units: vehicles per 15-min interval.
 | ML | TensorFlow >= 2.15, Keras, scikit-learn |
 | Data | pandas, NumPy, openpyxl |
 | Routing | haversine, custom graph search |
-| App | Streamlit, Folium, streamlit-folium |
-| Viz | Matplotlib, Seaborn |
-| Infra | Python 3.10+, Git, Streamlit Cloud |
+| **API** | **FastAPI, uvicorn, Pydantic** |
+| **Web UI** | **Next.js 14, React, Mapbox GL (react-map-gl), SWR, Tailwind CSS** |
+| Viz (offline) | Matplotlib, Seaborn |
+| Infra | Python 3.10+, Node.js 18+, Git |
 
 ---
 
@@ -131,8 +146,18 @@ Metric units: vehicles per 15-min interval.
 
 ```bash
 git clone https://github.com/NathanVuSwinburne/Traffic-volume-based-Routing-Guidance-System-for-Boroondara-Area.git
-pip install -r requirements.txt
-streamlit run app.py
+
+# Backend (Terminal 1)
+pip install -r backend/requirements.txt
+uvicorn backend.main:app --reload --port 8000
+
+# Frontend (Terminal 2)
+cd frontend
+# Add your Mapbox token to .env.local:
+# NEXT_PUBLIC_MAPBOX_TOKEN=pk.ey...
+npm install
+npm run dev
+# Open http://localhost:3000
 ```
 
 The app loads pre-computed prediction CSVs — no GPU required at runtime.

@@ -8,7 +8,6 @@ from src.algorithms.gbfs import GBFS
 from src.algorithms.ucs import UCS
 from src.algorithms.fringe import Fringe
 from datetime import datetime, time, date
-import streamlit as st
 import pandas as pd
 import math
 import os
