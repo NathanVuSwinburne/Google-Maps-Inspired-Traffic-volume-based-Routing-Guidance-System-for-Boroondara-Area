@@ -11,33 +11,31 @@ interface SiteMarkersProps {
   selectable: boolean;
 }
 
-const PIN_SIZE = 18;
+const SVG_SIZE = 1;
+const CIRCLE_R = 7;
+const CENTER = SVG_SIZE / 2;
 
 function SitePin({ highlighted }: { highlighted: boolean }) {
   const color = highlighted ? "#ef4444" : "#6b7280";
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <div
-        style={{
-          width: PIN_SIZE,
-          height: PIN_SIZE,
-          borderRadius: "50%",
-          background: color,
-          border: "2px solid white",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.35)",
-        }}
+    <svg
+      width={SVG_SIZE}
+      height={SVG_SIZE}
+      style={{ display: "block", overflow: "visible" }}
+    >
+      {/* transparent hit-area circle */}
+      <circle cx={CENTER} cy={CENTER} r={CENTER} fill="transparent" />
+      {/* visible marker circle */}
+      <circle
+        cx={CENTER}
+        cy={CENTER}
+        r={CIRCLE_R}
+        fill={color}
+        stroke="white"
+        strokeWidth={2}
+        filter="drop-shadow(0 2px 4px rgba(0,0,0,0.35))"
       />
-      <div
-        style={{
-          width: 0,
-          height: 0,
-          borderLeft: "5px solid transparent",
-          borderRight: "5px solid transparent",
-          borderTop: `7px solid ${color}`,
-          marginTop: -1,
-        }}
-      />
-    </div>
+    </svg>
   );
 }
 
@@ -55,10 +53,13 @@ export default function SiteMarkers({
           key={site.site_id}
           longitude={site.longitude}
           latitude={site.latitude}
-          anchor="bottom"
+          anchor="center"
         >
           <div
-            style={{ cursor: selectable ? "pointer" : "default" }}
+            style={{
+              cursor: selectable ? "pointer" : "default",
+              pointerEvents: "all",
+            }}
             onMouseEnter={() => onHover(site)}
             onMouseLeave={() => onHover(null)}
             onClick={() => { if (selectable) onSelect(site.site_id); }}

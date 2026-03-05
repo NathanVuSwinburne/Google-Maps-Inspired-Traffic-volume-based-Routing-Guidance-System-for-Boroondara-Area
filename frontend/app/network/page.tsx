@@ -8,10 +8,12 @@ import NetworkControls, {
 import ConnectionsTable from "@/components/network/ConnectionsTable";
 import SiteConnectionsPanel from "@/components/network/SiteConnectionsPanel";
 import { useNetworkSites, useNetworkConnections } from "@/hooks/useNetwork";
+import type { Site } from "@/types";
 
 // Dynamically import map (SSR disabled — Mapbox GL requires browser)
 const BaseMap = dynamic(() => import("@/components/map/BaseMap"), { ssr: false });
 const NetworkLayer = dynamic(() => import("@/components/map/NetworkLayer"), { ssr: false });
+const SiteMarkers = dynamic(() => import("@/components/map/SiteMarkers"), { ssr: false });
 const SitePopup = dynamic(() => import("@/components/map/SitePopup"), { ssr: false });
 
 export default function NetworkPage() {
@@ -25,46 +27,11 @@ export default function NetworkPage() {
   const [panelOpen, setPanelOpen] = useState(true);
   const [mode, setMode] = useState<DisplayMode>("all-sites");
   const [selectedSiteId, setSelectedSiteId] = useState<number | null>(null);
-  const [hoverPopup, setHoverPopup] = useState<{
-    longitude: number;
-    latitude: number;
-    siteId: number;
-    roads: string;
-    locations: string;
-  } | null>(null);
+  const [hoverSite, setHoverSite] = useState<Site | null>(null);
 
-  const handleMapClick = useCallback(
-    (e: mapboxgl.MapLayerMouseEvent) => {
-      if (mode !== "site-detail") return;
-      const features = e.features;
-      if (features && features.length > 0) {
-        setSelectedSiteId(features[0].properties?.site_id ?? null);
-      }
-    },
-    [mode]
-  );
-
-  const handleMouseMove = useCallback(
-    (e: mapboxgl.MapLayerMouseEvent) => {
-      const features = e.features;
-      if (features && features.length > 0) {
-        const props = features[0].properties;
-        const geom = features[0].geometry as GeoJSON.Point;
-        if (props && geom) {
-          setHoverPopup({
-            longitude: geom.coordinates[0],
-            latitude: geom.coordinates[1],
-            siteId: props.site_id,
-            roads: props.connected_roads,
-            locations: props.locations,
-          });
-          return;
-        }
-      }
-      setHoverPopup(null);
-    },
-    []
-  );
+  const handleSiteSelect = useCallback((siteId: number) => {
+    setSelectedSiteId(siteId);
+  }, []);
 
   const isLoading = sitesLoading || connsLoading;
 
@@ -132,22 +99,27 @@ export default function NetworkPage() {
 
       {/* Map */}
       <div className="flex-1 relative">
-        <BaseMap
-          onClick={handleMapClick}
-          onMouseMove={handleMouseMove}
-          interactiveLayerIds={["sites-symbol"]}
-        >
-          {sitesGeoJSON && connectionsGeoJSON && (
-            <NetworkLayer
-              sitesGeoJSON={sitesGeoJSON}
-              connectionsGeoJSON={connectionsGeoJSON}
+        <BaseMap>
+          {connectionsGeoJSON && (
+            <NetworkLayer connectionsGeoJSON={connectionsGeoJSON} />
+          )}
+          {sitesData && (
+            <SiteMarkers
+              sites={sitesData.sites}
               highlightedId={selectedSiteId}
+              onHover={setHoverSite}
+              onSelect={handleSiteSelect}
+              selectable={mode === "site-detail"}
             />
           )}
-          {hoverPopup && (
+          {hoverSite && (
             <SitePopup
-              {...hoverPopup}
-              onClose={() => setHoverPopup(null)}
+              longitude={hoverSite.longitude}
+              latitude={hoverSite.latitude}
+              siteId={hoverSite.site_id}
+              roads={hoverSite.connected_roads.join(", ")}
+              locations={hoverSite.locations.join(" | ")}
+              onClose={() => setHoverSite(null)}
             />
           )}
         </BaseMap>
