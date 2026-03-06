@@ -9,7 +9,11 @@ Built on **real-world SCATS traffic signal volume data (City of Boroondara, 2006
   <img alt="Next.js" src="https://img.shields.io/badge/Next.js-14-black">
   <img alt="TensorFlow" src="https://img.shields.io/badge/TensorFlow-Deep%20Learning-orange">
   <img alt="License" src="https://img.shields.io/badge/License-MIT-green">
+  <img alt="AWS" src="https://img.shields.io/badge/AWS-EC2-orange">
+  <img alt="Live" src="https://img.shields.io/badge/Live-Demo-brightgreen">
 </p>
+
+> ⭐ **Live Demo**: [http://3.25.163.65](http://3.25.163.65) — deployed on AWS EC2 with Nginx + systemd
 
 ---
 
@@ -198,3 +202,101 @@ Press `Ctrl + C` in each terminal to shut down the backend and frontend.
 | CORS error in browser console | API URL mismatch | Ensure backend is on port 8000 and `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` |
 | "Connection refused" when searching routes | Backend not running | Start the backend in Terminal 1 first |
 | Port 8000 already in use | Another process on that port | Change to `--port 8001` and update `.env.local` accordingly |
+
+---
+
+## ☁️ Production Deployment (AWS)
+
+The application is deployed as a live full-stack system on an EC2 instance and publicly accessible at:
+
+**[http://3.25.163.65](http://3.25.163.65)**
+
+---
+
+### Architecture Overview
+
+```
+Internet (User Browser)
+        │
+        ▼
+Nginx Reverse Proxy (Port 80)
+        │
+        ├── "/"      → Next.js Frontend (Port 3000)
+        │
+        └── "/api/*" → FastAPI Backend (Port 8000)
+                           │
+                           ▼
+              Routing Engine + Traffic Dataset
+```
+
+---
+
+### Infrastructure
+
+| Component | Technology | Role |
+|-----------|-----------|------|
+| Cloud Hosting | AWS EC2 (Ubuntu) | Runs the entire application stack |
+| Reverse Proxy | Nginx | Routes public traffic to frontend/backend |
+| Frontend Service | Next.js 14 | Serves the interactive UI |
+| Backend API | FastAPI + Uvicorn | Handles routing queries |
+| Process Manager | systemd | Starts services automatically; restarts on failure |
+| Map Rendering | Mapbox GL | Interactive traffic map rendered in the browser |
+
+---
+
+### Request Flow
+
+1. **User interaction** — selects origin/destination on the map UI
+2. **Frontend request** — Next.js sends a request to `/api/routes`
+3. **Reverse proxy** — Nginx forwards the request internally to `localhost:8000`
+4. **Backend processing** — FastAPI receives the request; routing engine computes the optimal path using predicted traffic volumes and graph search algorithms (A*, UCS, etc.)
+5. **Response** — FastAPI returns route data as JSON
+6. **Visualisation** — frontend draws the route overlay on the Mapbox map
+
+---
+
+### Service Management
+
+Both services are managed by systemd, ensuring reliability:
+
+```bash
+systemctl status tbrgs-backend
+systemctl status tbrgs-frontend
+```
+
+| Service | Role |
+|---------|------|
+| `tbrgs-backend.service` | FastAPI API |
+| `tbrgs-frontend.service` | Next.js server |
+
+Features: automatic restart on crash, auto-start on server reboot, centralised logging via `journalctl`.
+
+---
+
+### Backend Runtime
+
+At startup the backend loads into memory:
+- Site network metadata
+- Pre-computed traffic volume predictions
+- Graph representation of road connections
+
+This allows route queries to execute quickly without reloading datasets on each request.
+
+---
+
+### Map Rendering
+
+The interactive map runs entirely in the user's browser via Mapbox GL. The EC2 server handles only routing computation — Mapbox streams map tiles directly from its CDN. This keeps infrastructure lightweight.
+
+---
+
+### Security & Configuration
+
+Sensitive configuration is managed via environment variables:
+
+| Variable | Purpose |
+|----------|---------|
+| `NEXT_PUBLIC_MAPBOX_TOKEN` | Mapbox public token |
+| `NEXT_PUBLIC_API_BASE_URL` | Backend API base URL |
+
+The Mapbox token is stored in `frontend/.env.production` and is never committed to the repository.
