@@ -1,4 +1,4 @@
-# 🚦 AI-Powered Traffic Route Guidance System (Boroondara 2006)
+# 🚦 Traffic Congestion Prediction & Route Optimisation System (Boroondara 2006)
 
 An **end-to-end traffic prediction & routing** project that fuses **deep learning time-series forecasting** with **heuristic graph search** to deliver **congestion-aware routes**.
 Built on **real-world SCATS traffic signal volume data (City of Boroondara, 2006)** from the Victorian Government DataVic portal.
