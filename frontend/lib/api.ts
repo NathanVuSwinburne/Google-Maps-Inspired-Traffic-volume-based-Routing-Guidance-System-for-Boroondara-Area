@@ -6,41 +6,41 @@ import type {
   RouteRequest,
   HealthResponse,
 } from "@/types";
-
-const BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...init,
-  });
-  if (!res.ok) {
-    const body = await res.text();
-    try {
-      const json = JSON.parse(body);
-      throw new Error(json.detail ?? body);
-    } catch (e) {
-      if (e instanceof SyntaxError) throw new Error(body);
-      throw e;
-    }
-  }
-  return res.json() as Promise<T>;
-}
+import { loadNetwork, loadTraffic } from "@/lib/routing/data-loader";
+import { findRoutes } from "@/lib/routing/route-finder";
 
 export const api = {
-  health: () => apiFetch<HealthResponse>("/api/health"),
+  health: async (): Promise<HealthResponse> => {
+    const net = await loadNetwork();
+    return { status: "ok", sites: net.sites.length, connections: net.connections.length };
+  },
 
-  getSites: () => apiFetch<NetworkSitesResponse>("/api/network/sites"),
+  getSites: async (): Promise<NetworkSitesResponse> => {
+    const net = await loadNetwork();
+    return { sites: net.sites, count: net.sites.length };
+  },
 
-  getConnections: () =>
-    apiFetch<NetworkConnectionsResponse>("/api/network/connections"),
+  getConnections: async (): Promise<NetworkConnectionsResponse> => {
+    const net = await loadNetwork();
+    return { connections: net.connections, count: net.connections.length };
+  },
 
-  getSite: (siteId: number) =>
-    apiFetch<SiteDetailResponse>(`/api/network/sites/${siteId}`),
+  getSite: async (siteId: number): Promise<SiteDetailResponse> => {
+    const net = await loadNetwork();
+    const site = net.sites.find((s) => s.site_id === siteId);
+    if (!site) throw new Error(`Site ${siteId} not found`);
+    return {
+      site,
+      outgoing: net.connections.filter((c) => c.from_id === siteId),
+      incoming: net.connections.filter((c) => c.to_id === siteId),
+    };
+  },
 
-  findRoutes: (body: RouteRequest) =>
-    apiFetch<FindRoutesResponse>("/api/routes/find", {
-      method: "POST",
-      body: JSON.stringify(body),
-    }),
+  findRoutes: async (body: RouteRequest): Promise<FindRoutesResponse> => {
+    const [net, traffic] = await Promise.all([
+      loadNetwork(),
+      loadTraffic(body.model),
+    ]);
+    return findRoutes(body, net, traffic);
+  },
 };

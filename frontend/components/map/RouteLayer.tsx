@@ -95,6 +95,7 @@ export default function RouteLayer({ routeId, geojson, color }: RouteLayerProps)
 
   useEffect(() => {
     if (!map || totalLength === 0) return;
+    const mapRef = map;
 
     function tick(now: number) {
       const dt = lastTimeRef.current ? now - lastTimeRef.current : 0;
@@ -115,7 +116,7 @@ export default function RouteLayer({ routeId, geojson, color }: RouteLayerProps)
         }
       }
 
-      (map.getSource(arrowSourceId) as GeoJSONSource | undefined)?.setData({
+      (mapRef.getSource(arrowSourceId) as GeoJSONSource | undefined)?.setData({
         type: "FeatureCollection",
         features,
       });
@@ -133,6 +134,7 @@ export default function RouteLayer({ routeId, geojson, color }: RouteLayerProps)
   const lineLayer: LineLayer = {
     id: lineLayerId,
     type: "line",
+    source: lineSourceId,
     paint: {
       "line-color": color,
       "line-width": 4,
@@ -143,6 +145,7 @@ export default function RouteLayer({ routeId, geojson, color }: RouteLayerProps)
   const arrowLayer: SymbolLayer = {
     id: arrowLayerId,
     type: "symbol",
+    source: arrowSourceId,
     layout: {
       "text-field": "▶",
       "text-size": 22,

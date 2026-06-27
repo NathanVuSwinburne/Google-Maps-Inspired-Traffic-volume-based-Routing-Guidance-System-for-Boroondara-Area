@@ -11,6 +11,7 @@ interface NetworkLayerProps {
 const connectionLineLayer: LineLayer = {
   id: "connections-line",
   type: "line",
+  source: "connections",
   paint: {
     "line-color": "#22c55e",
     "line-width": 3,
