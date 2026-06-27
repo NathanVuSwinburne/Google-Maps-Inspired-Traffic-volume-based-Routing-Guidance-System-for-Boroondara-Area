@@ -5,15 +5,15 @@ Built on **real-world SCATS traffic signal volume data (City of Boroondara, 2006
 
 <p align="left">
   <img alt="Python" src="https://img.shields.io/badge/Python-3.10+-blue">
-  <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-backend-green">
   <img alt="Next.js" src="https://img.shields.io/badge/Next.js-14-black">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-routing-blue">
   <img alt="TensorFlow" src="https://img.shields.io/badge/TensorFlow-Deep%20Learning-orange">
+  <img alt="Vercel" src="https://img.shields.io/badge/Vercel-Deployed-black">
   <img alt="License" src="https://img.shields.io/badge/License-MIT-green">
-  <img alt="AWS" src="https://img.shields.io/badge/AWS-EC2-orange">
   <img alt="Live" src="https://img.shields.io/badge/Live-Demo-brightgreen">
 </p>
 
-> ⭐ **Live Demo**: [http://3.25.163.65](http://3.25.163.65) — deployed on AWS EC2 with Nginx + systemd
+> ⭐ **Live Demo**: [https://google-maps-inspired-traffic-volume.vercel.app/routes](https://google-maps-inspired-traffic-volume.vercel.app/routes)
 
 ---
 
@@ -23,6 +23,7 @@ Built on **real-world SCATS traffic signal volume data (City of Boroondara, 2006
 - **Feature Engineering**: Lag features (15m/1h/1d), sin/cos encodings (DoW/ToD), weekend & gap flags, location embeddings, baseline averages.
 - **Heuristic Routing**: A*, UCS, BFS, DFS, GBFS, Fringe Search; **Haversine** heuristic; **travel-time weighted edges** from ML predictions.
 - **Interactive App**: Next.js + Mapbox GL with **color-coded congestion maps**, multi-model/multi-algorithm comparisons, animated route overlays.
+- **Fully Static**: All routing algorithms ported to TypeScript and run **entirely in the browser** — no backend server required.
 - **Robustness**: 10+ structured system tests (isolated nodes, long routes, rush hour vs off-peak, date bounds).
 
 **Page 1.1: Network Map**
@@ -57,6 +58,22 @@ Built on **real-world SCATS traffic signal volume data (City of Boroondara, 2006
 
 ---
 
+## 📦 Pre-computed Traffic Dataset
+
+ML predictions are pre-processed offline and committed to the repository as static JSON files loaded in the browser:
+
+| File | Size | Contents |
+|------|------|----------|
+| `public/data/traffic_LSTM.json` | ~16.5 MB (~1.7 MB gzipped) | LSTM predictions |
+| `public/data/traffic_GRU.json` | ~16.4 MB (~1.7 MB gzipped) | GRU predictions |
+| `public/data/traffic_Bi_LSTM.json` | ~16.5 MB (~1.7 MB gzipped) | BiLSTM predictions |
+| `public/data/network.json` | <1 MB | 39 sites, 84 road connections |
+
+- **Coverage**: 61 dates × 96 intervals × 83 routing locations = **802,272 predictions per model** (2,406,816 total across 3 models)
+- **Structure**: `{ date → { interval_id → { LOCATION → volume } } }` — O(1) lookup at route-find time
+
+---
+
 ## 🗺️ Data
 
 - **Source**: Victorian Government **DataVic** — Traffic Signal Volume Data
@@ -68,25 +85,19 @@ Built on **real-world SCATS traffic signal volume data (City of Boroondara, 2006
 
 ## 🧰 Tech Stack
 
-- **Backend**: Python 3.10, FastAPI, uvicorn, Pydantic, pandas, haversine
 - **Frontend**: Next.js 14, React 18, TypeScript, Mapbox GL (`react-map-gl`), SWR, Tailwind CSS
-- **ML**: TensorFlow/Keras — LSTM, GRU, BiLSTM, CNN-BiLSTM, CNN-BiGRU
-- **Algorithms**: A\*, UCS, BFS, DFS, GBFS, Fringe Search
+- **Routing (in-browser)**: A\*, UCS, BFS, DFS, GBFS, Fringe Search — all implemented in TypeScript with a MinHeap and Haversine heuristic
+- **ML**: TensorFlow/Keras — LSTM, GRU, BiLSTM, CNN-BiLSTM, CNN-BiGRU (trained offline in Python)
+- **Deployment**: Vercel (static export, zero backend)
 
 ---
 
-
-## 🚀 Running the App Locally (FastAPI + Next.js)
-
-> **You need two terminals open at the same time** — one for the backend, one for the frontend.
-
----
+## 🚀 Running the App Locally
 
 ### Prerequisites
 
 | Tool | Minimum version | How to check |
 |------|----------------|--------------|
-| Python | 3.10+ | `python --version` |
 | Node.js | 18+ | `node --version` |
 | npm | 9+ | `npm --version` |
 | Mapbox token | — | Free at [mapbox.com](https://www.mapbox.com) (starts with `pk.`) |
@@ -102,93 +113,37 @@ cd Google-Maps-Inspired-Traffic-volume-based-Routing-Guidance-System-for-Boroond
 
 ---
 
-### Step 2 — Start the backend (Terminal 1)
-
-Run from the **project root** (not inside `backend/`).
+### Step 2 — Configure your Mapbox token
 
 ```bash
-# Install Python dependencies
-pip install -r backend/requirements.txt
-
-# Start the FastAPI server with hot-reload
-uvicorn backend.main:app --reload --port 8000
+cd frontend
 ```
 
-**Expected output:**
-```
-INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-INFO:     Started reloader process ...
-INFO:     Application startup complete.
-```
-
-| URL | Purpose |
-|-----|---------|
-| `http://localhost:8000` | API base URL |
-| `http://localhost:8000/docs` | Swagger UI — interactive API explorer |
-
-> Keep this terminal running. The backend loads all pre-computed ML prediction CSVs at startup — **no GPU required**.
-
----
-
-### Step 3 — Configure your Mapbox token (one-time setup)
-
-The map requires a free Mapbox public token.
-
-1. Sign up or log in at [mapbox.com](https://www.mapbox.com)
-2. Go to your account page and copy the **default public token** (begins with `pk.`)
-3. Open `frontend/.env.local` and fill in:
+Create `frontend/.env.local`:
 
 ```env
 NEXT_PUBLIC_MAPBOX_TOKEN=pk.your_token_here
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ```
 
 > `frontend/.env.local` is git-ignored — your token is never committed to the repository.
 
 ---
 
-### Step 4 — Start the frontend (Terminal 2)
+### Step 3 — Install and run
 
 ```bash
-# Navigate into the frontend directory
-cd frontend
-
-# Install Node.js dependencies (first time only — may take a minute)
 npm install
-
-# Start the Next.js development server
 npm run dev
 ```
 
-**Expected output:**
-```
-   ▲ Next.js 14.x.x
-   - Local:        http://localhost:3000
-   - Ready in Xs
-```
-
-> If port 3000 is busy, Next.js will automatically use 3001, 3002, etc.
-
----
-
-### Step 5 — Open the app
-
-With **both servers running**, visit:
-
-```
-http://localhost:3000
-```
+Open [http://localhost:3000](http://localhost:3000).
 
 | Page | Path | What it does |
 |------|------|--------------|
 | Network Map | `/network` | Interactive map of all SCATS intersections and road connections |
 | Route Finder | `/routes` | Pick origin, destination, date/time, ML model and algorithms — get ranked routes drawn on the map |
 
----
-
-### Stopping the servers
-
-Press `Ctrl + C` in each terminal to shut down the backend and frontend.
+> No backend required. All routing runs in the browser using pre-computed traffic data.
 
 ---
 
@@ -196,110 +151,48 @@ Press `Ctrl + C` in each terminal to shut down the backend and frontend.
 
 | Symptom | Likely cause | Fix |
 |---------|-------------|-----|
-| `ModuleNotFoundError` on backend start | Missing Python packages | `pip install -r backend/requirements.txt` from project root |
-| `npm: command not found` | Node.js not installed | Download LTS from [nodejs.org](https://nodejs.org) |
 | Map is blank or shows a token error | Mapbox token missing/invalid | Check `NEXT_PUBLIC_MAPBOX_TOKEN` in `frontend/.env.local` |
-| CORS error in browser console | API URL mismatch | Ensure backend is on port 8000 and `NEXT_PUBLIC_API_BASE_URL=http://localhost:8000` |
-| "Connection refused" when searching routes | Backend not running | Start the backend in Terminal 1 first |
-| Port 8000 already in use | Another process on that port | Change to `--port 8001` and update `.env.local` accordingly |
+| `npm: command not found` | Node.js not installed | Download LTS from [nodejs.org](https://nodejs.org) |
 
 ---
 
-## ☁️ Production Deployment (AWS)
+## ☁️ Production Deployment (Vercel)
 
-The application is deployed as a live full-stack system on an EC2 instance and publicly accessible at:
+The app is deployed as a **fully static Next.js site** on Vercel — no backend server, no EC2.
 
-**[http://3.25.163.65](http://3.25.163.65)**
+**[https://google-maps-inspired-traffic-volume.vercel.app/routes](https://google-maps-inspired-traffic-volume.vercel.app/routes)**
 
----
-
-### Architecture Overview
+### Architecture
 
 ```
-Internet (User Browser)
-        │
-        ▼
-Nginx Reverse Proxy (Port 80)
-        │
-        ├── "/"      → Next.js Frontend (Port 3000)
-        │
-        └── "/api/*" → FastAPI Backend (Port 8000)
-                           │
-                           ▼
-              Routing Engine + Traffic Dataset
+User Browser
+     │
+     ▼
+Vercel CDN (global edge)
+     │
+     ├── Next.js static pages (HTML/JS/CSS)
+     │
+     └── /public/data/*.json  ← pre-computed ML predictions served as static files
+              │
+              ▼
+     In-browser routing engine (TypeScript)
+     A*, UCS, BFS, DFS, GBFS, Fringe Search
 ```
 
----
+### How it works
 
-### Infrastructure
+1. **User selects** origin, destination, date/time, ML model, and algorithms
+2. **Browser fetches** `traffic_<model>.json` once and caches it for the session
+3. **Routing engine** builds a weighted graph from traffic volumes and runs the selected algorithms
+4. **Results** are ranked by travel time and drawn as animated overlays on the Mapbox map
 
-| Component | Technology | Role |
-|-----------|-----------|------|
-| Cloud Hosting | AWS EC2 (Ubuntu) | Runs the entire application stack |
-| Reverse Proxy | Nginx | Routes public traffic to frontend/backend |
-| Frontend Service | Next.js 14 | Serves the interactive UI |
-| Backend API | FastAPI + Uvicorn | Handles routing queries |
-| Process Manager | systemd | Starts services automatically; restarts on failure |
-| Map Rendering | Mapbox GL | Interactive traffic map rendered in the browser |
+### Deploy your own
 
----
-
-### Request Flow
-
-1. **User interaction** — selects origin/destination on the map UI
-2. **Frontend request** — Next.js sends a request to `/api/routes`
-3. **Reverse proxy** — Nginx forwards the request internally to `localhost:8000`
-4. **Backend processing** — FastAPI receives the request; routing engine computes the optimal path using predicted traffic volumes and graph search algorithms (A*, UCS, etc.)
-5. **Response** — FastAPI returns route data as JSON
-6. **Visualisation** — frontend draws the route overlay on the Mapbox map
-
----
-
-### Service Management
-
-Both services are managed by systemd, ensuring reliability:
-
-```bash
-systemctl status tbrgs-backend
-systemctl status tbrgs-frontend
-```
-
-| Service | Role |
-|---------|------|
-| `tbrgs-backend.service` | FastAPI API |
-| `tbrgs-frontend.service` | Next.js server |
-
-Features: automatic restart on crash, auto-start on server reboot, centralised logging via `journalctl`.
-
----
-
-### Backend Runtime
-
-At startup the backend loads into memory:
-- Site network metadata
-- Pre-computed traffic volume predictions
-- Graph representation of road connections
-
-This allows route queries to execute quickly without reloading datasets on each request.
-
----
-
-### Map Rendering
-
-The interactive map runs entirely in the user's browser via Mapbox GL. The EC2 server handles only routing computation — Mapbox streams map tiles directly from its CDN. This keeps infrastructure lightweight.
-
----
-
-### Security & Configuration
-
-Sensitive configuration is managed via environment variables:
-
-| Variable | Purpose |
-|----------|---------|
-| `NEXT_PUBLIC_MAPBOX_TOKEN` | Mapbox public token |
-| `NEXT_PUBLIC_API_BASE_URL` | Backend API base URL |
-
-The Mapbox token is stored in `frontend/.env.production` and is never committed to the repository.
+1. Fork the repo and push to GitHub
+2. Sign up at [vercel.com](https://vercel.com) with GitHub
+3. Import the repo → set **Root Directory** to `frontend`
+4. Add environment variable: `NEXT_PUBLIC_MAPBOX_TOKEN` = your Mapbox token
+5. Deploy — every push to `main` auto-redeploys
 
 ---
 
@@ -309,7 +202,7 @@ The Mapbox token is stored in `frontend/.env.production` and is never committed 
 - Temporal feature engineering (lag windows, sin/cos time encodings, weekend flags) improved all five models more than switching architectures did
 - CNN layers as feature extractors before a BiGRU captured both local patterns and long-range dependencies better than a plain LSTM baseline
 - Heuristic search algorithms (A\*, GBFS) are fast enough for interactive use when edge weights come from pre-computed ML predictions rather than real-time API calls
-- Deploying on EC2 with Nginx + systemd requires careful handling of model load time at startup — pre-loading the dataset into memory on boot was necessary for acceptable first-response latency
+- Porting the routing engine from Python to TypeScript and pre-computing traffic lookups eliminated the need for a backend server entirely, reducing hosting cost to zero
 
 ## ⚠️ Limitations & Next Steps
 
